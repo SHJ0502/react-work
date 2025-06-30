@@ -6,10 +6,10 @@ const cors = require('cors');
 require('dotenv').config(); //.env 파일의 환경변수를 로드한다.
 
 // MySQL 연결 풀은 db.js에서 가져옵니다. (연결 테스트는 db.js에서 이미 수행됩니다)
-require('./db'); // 이 파일이 실행되면서 db.js의 연결 풀이 초기화됩니다.
+require('./db.js'); // 이 파일이 실행되면서 db.js의 연결 풀이 초기화됩니다.
 
 // productRepository를 임포트하여 데이터베이스 로직을 사용합니다.
-const productRoutes = require('./routes/productRoutes'); // 상품 라우트 임포트
+const productRoutes = require('./routes/productRoutes.js'); // 상품 라우트 임포트
 // const userRoutes = require('./routes/userRoutes');   // 나중에 사용자 라우트 임포트
 // const orderRoutes = require('./routes/orderRoutes');   // 나중에 주문 라우트 임포트
 
@@ -25,7 +25,7 @@ app.use(express.json());
 
 // 첫번쨰 API 엔드포인트 정의 : 루트 경로('/')로 GET 요청이 오면 응답한다.
 app.get('/', (req, res) => {
-    res.send('Hello, from Backend with MySQL Repository!');
+    res.send('Hello, from Backend with a fully Layered Architecture (MySQL)!');
 });
 
 // 라우트 미들웨어 연결

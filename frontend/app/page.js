@@ -1,7 +1,8 @@
 'use client'; // 클라이언트 컴포넌트임을 명시 (useState, useEffect 사용)
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+//import Image from 'next/image';  //dns ?네트워크? 문제 암튼 보안문제로 인해서 사용불가
 
  export default function Home() {
 
@@ -27,16 +28,13 @@ import axios from 'axios';
   // 백엔드 api의 기본 url
   const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
-  // 컴포넌트가 마운트될 때 상품목록을 가져오는 함수
-  useEffect(() =>{
-     fetchProducts();
-  }, []);
-
+  
   // 상품 목록을 백엔드에서 가져오는 비동기 함수 (axios 사용) 
-  const fetchProducts = async() => {
+  // --- ⭐ 중요: fetchProducts 정의가 useEffect보다 먼저 와야 합니다. ⭐ ---
+  const fetchProducts = useCallback(async() => {
     setLoading(true);
     setError(null);
-
+    
     try {
       //axios get 요청
       const response = await axios.get(API_BASE_URL + '/api/products');
@@ -46,7 +44,7 @@ import axios from 'axios';
       setProducts(response.data.products);
       
     } catch (e) {
-
+      
       console.error('Error fetching products:', e);
       // axios 에러 처리 개선: 응답, 요청, 일반 에러 분리
       if (e.response) {
@@ -62,7 +60,13 @@ import axios from 'axios';
     } finally {
       setLoading(false); // 종료
     };
-  };
+  }, [API_BASE_URL]);   //fetchProducts는 API_BASE_URL에 의존하므로 포함 추가 usecallback 에서는 선언된 변수는 반드시 의존하기 때문에 배열에 넣어야한다.
+  
+  // 컴포넌트가 마운트될 때 상품목록을 가져오는 함수 > // 상품 목록을 백엔드에서 가져오는 비동기 함수 (useCallback으로 메모이제이션) (2025-06-30 추가)
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]); //useCallback으로 감싼 fetchProducts를 의존성 배열에 포함
+
 
   // 폼 입력 필드 변경 핸들러
   const handleInputChange = (e) => {
@@ -227,8 +231,16 @@ import axios from 'axios';
               onChange={handleInputChange}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             />
+            {/* ⭐ Image 컴포넌트 대신 일반 img 태그 사용 */}
             {newProduct.image_url && (
-              <img src={newProduct.image_url} alt="상품 이미지 미리보기" className="mt-2 h-20 w-20 object-cover rounded-md shadow" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/80x80/CCCCCC/000000?text=No+Image'; }} />
+              <img
+                src={newProduct.image_url}
+                alt="상품 이미지 미리보기"
+                width={80} // img 태그에서는 width, height를 직접 지정
+                height={80}
+                className="mt-2 h-20 w-20 object-cover rounded-md shadow"
+                onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/80x80/CCCCCC/000000?text=No+Image'; }}
+              />
             )}
           </div>
           <div className="md:col-span-2 text-right">
@@ -258,11 +270,14 @@ import axios from 'axios';
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map(product => (
             <div key={product.id} className="border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col items-center text-center">
-              <img 
-                src={product.image_url || `https://placehold.co/150x100/CCCCCC/000000?text=No+Image`} 
-                alt={product.name} 
+             {/* ⭐ Image 컴포넌트 대신 일반 img 태그 사용 */}
+              <img
+                src={product.image_url || `https://placehold.co/150x100/CCCCCC/000000?text=No+Image`}
+                alt={product.name}
+                width={150} // img 태그에서는 width, height를 직접 지정
+                height={100}
                 className="w-full h-32 object-cover rounded-md mb-3"
-                onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x100/CCCCCC/000000?text=No+Image'; }} // 이미지 로드 실패 시 대체 이미지
+                onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x100/CCCCCC/000000?text=No+Image'; }}
               />
               <h3 className="text-lg font-semibold text-gray-800 truncate w-full mb-1">{product.name}</h3>
               <p className="text-gray-600 text-sm mb-2 line-clamp-2">{product.description || '설명 없음'}</p>
