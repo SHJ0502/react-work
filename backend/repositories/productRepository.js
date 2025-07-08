@@ -97,6 +97,7 @@ async function updateProduct(id,productData) {
     let connection; // connection 변수를 try 블록 밖에서 선언
     try {
        connection = await pool.getConnection(); // 연결 풀에서 연결을 가져옵니다.
+
         // products 테이블에 새 상품을 삽입하는 SQL 쿼리
         // 배열로 전달된 값들이 순서대로 매핑됩니다.
         const [result] = await connection.execute(
@@ -112,8 +113,10 @@ async function updateProduct(id,productData) {
             );
 
         // 업데이트된 행이 없다면 (ID를 찾지 못했다면) null 반환
-        if (result.affectedRows) {
+        if (result.affectedRows === 0) {
+            console.log("이거 들어옴 엿됨....");
             return null;
+
         }
 
         // 업데이트된 상품의 최신 정보를 다시 조회하여 반환
@@ -121,6 +124,7 @@ async function updateProduct(id,productData) {
             'SELECT id, name, description, price, stock_quantity, image_url, category, created_at, updated_at FROM products WHERE id = ?',
             [id]
         );
+
         return updateProductRows; // 조회된 상품 배열 반환
 
     } catch (err) {

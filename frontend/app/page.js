@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 //import Image from 'next/image';  //dns ?네트워크? 문제 암튼 보안문제로 인해서 사용불가
 
+// modal 컴포넌트 추가
+import ConfirmationModal from '../components/ConfirmationModal';
+
+
+
  export default function Home() {
 
   // 상품목록을 저장할 변수
@@ -18,6 +23,9 @@ import axios from 'axios';
     category: ''
   });
 
+  //현재 수정 중인 상품의 ID를 저장할 상태 (null이면 새 상품 추가 모드, ID가 있으면 수정 모드)
+  const [editingProductId, setEditingProductId] = useState(null);
+
   // 로딩 상태를 관리  (데잍어 fetching 중)
   const [loading, setLoading] = useState(true);
   // 에러 메시지를 저장할 변수
@@ -25,12 +33,17 @@ import axios from 'axios';
   // 상품 추가 성공 메시지를 저장할 상태 변수 
   const [successMessage, setSuccessMessage] = useState(null);    
 
+  //모달관련 상태 추가
+  const [isModalOpen, setIsModalOpen] = useState(false);  // 모달 열림/닫힘
+  const [productToDelId,setProductToDelId] = useState(null);  // 상품 삭제id
+
+  
   // 백엔드 api의 기본 url
   const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
   
   // 상품 목록을 백엔드에서 가져오는 비동기 함수 (axios 사용) 
-  // --- ⭐ 중요: fetchProducts 정의가 useEffect보다 먼저 와야 합니다. ⭐ ---
+  // --- 중요: fetchProducts 정의가 useEffect보다 먼저 와야 합니다. ---
   const fetchProducts = useCallback(async() => {
     setLoading(true);
     setError(null);
@@ -78,7 +91,7 @@ import axios from 'axios';
     }));
   };
 
-  // 새 상품 제출 핸들러
+  // 새 상품 제출 핸들러 (PUT/POST 분기 처리)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -110,11 +123,22 @@ import axios from 'axios';
     };
     
     try {
-      // axios.post 요청으로 변경 : API_BASE_URL과 엔드포인트를 올바르게 조합.
-      const response = await axios.post(API_BASE_URL + '/api/products', productToSend);
 
-      console.log("Product Added : ",response.data.product);
-      setSuccessMessage('상품이 성공적으로 추가되었습니다.');
+      // axios.post 요청으로 변경 : API_BASE_URL과 엔드포인트를 올바르게 조합.
+      // const response = await axios.post(API_BASE_URL + '/api/products', productToSend);
+      let response;
+    
+      if (editingProductId) { //수정 모드 (PUT 요청)
+        response = await axios.put(`${API_BASE_URL}/api/products/${editingProductId}`,productToSend);
+        setSuccessMessage('상품이 성공적으로 수정되었습니다!');
+        setEditingProductId(null); // 수정 모드 종료
+      } else {                // 새 상품 추가 모드 (POST 요청)
+        response = await axios.post(`${API_BASE_URL}/api/products`,productToSend);
+        setSuccessMessage('상품이 성공적으로 추가되었습니다!');
+      }
+
+      console.log("API Response : ",response.data.product);
+      
       // 상품 초기화
       setNewProduct({
         name: '',
@@ -142,6 +166,112 @@ import axios from 'axios';
     }
   }; 
   
+  // 상품 수정 버튼 핸들러
+  const handleEdit = (product) => {
+    setEditingProductId(product.id);
+    setNewProduct({
+      name: product.name,
+      description: product.description || '',
+      price: product.price,
+      stock_quantity: product.stock_quantity,
+      image_url: product.image_url || '',
+      category: product.category || ''
+    });
+
+    setSuccessMessage(null); //메시지 초기화
+    setError(null)          // 에러 초기화
+    window.scrollTo({top:0, behavior: 'smooth'});
+  };
+
+  // // 상품 삭제 버튼 핸들러 > 모달 콤포넌트 추가
+  // const handleDelete = async (id) => {
+
+  //   const confirmDelMsg  = window.confirm('정말로 상품을 삭제할겁니까? ㅠㅠ');
+  //   if (!confirmDelMsg) {
+  //     return;
+  //   }
+    
+  //   // 진행 and 초기화 (init)
+  //   setLoading(true);
+  //   setError(null);
+  //   setSuccessMessage(null);
+
+  //   try {
+  //     response = await axios.delete(`${API_BASE_URL}/api/products/${id}`);
+  //     console.log('Product deleted:', response.data.message);
+  //     setSuccessMessage('상품이 성공적으로 삭제되었습니다!');
+  //     fetchProducts(); // 상품 목록 새로고침
+  //   } catch (error) {
+  //     console.error('Error deleting product:', err);
+  //     if (err.response) {
+  //       setError(err.response.data.error || `삭제 실패: ${err.response.status}`);
+  //     } else if (err.request) {
+  //       setError('네트워크 오류: 백엔드 서버에 연결할 수 없습니다.');
+  //     } else {
+  //       setError('요청 설정 중 오류 발생: ' + err.message);
+  //     }
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+  
+  // 상품삭제 버튼 클릭 핸들러 (모달 콤포넌트 표시)
+  const handleDelClick = (id) => {
+    setProductToDelId(id);
+    setIsModalOpen(true);
+  };
+
+  // 모달의 '확인' 버튼 클릭시 실제 삭제 로직 실행
+  const handleConfirmDel = async () => {
+    setIsModalOpen(false); //모달 닫기
+    if (!productToDelId) return; //삭제할 id가 존재하지 않으면 중단
+
+    setLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+    
+     try {
+      response = await axios.delete(`${API_BASE_URL}/api/products/${id}`);
+      console.log('Product deleted:', response.data.message);
+      setSuccessMessage('상품이 성공적으로 삭제되었습니다!');
+      fetchProducts(); // 상품 목록 새로고침
+    } catch (error) {
+      console.error('Error deleting product:', err);
+      if (err.response) {
+        setError(err.response.data.error || `삭제 실패: ${err.response.status}`);
+      } else if (err.request) {
+        setError('네트워크 오류: 백엔드 서버에 연결할 수 없습니다.');
+      } else {
+        setError('요청 설정 중 오류 발생: ' + err.message);
+      }
+    } finally {
+      setLoading(false);
+      setEditingProductId(null);  //삭제할 상품 id 초기화
+    }
+  }
+
+  // 모달의 취소 버튼 클릭시 모달 닫기
+  const handleCancelDel = () => {
+    setIsModalOpen(false);
+    setProductToDelId(null);
+    setSuccessMessage('상품 삭제가 취소되었습니다.');
+  }
+
+  // 수정 취소 버튼 핸들러
+  const handleCancelEdit = () => {
+    setEditingProductId(null);
+    setNewProduct({
+        name: '',
+        description: '',
+        price: '',
+        stock_quantity: '',
+        image_url: '',
+        category: ''
+      });
+      setSuccessMessage(null);
+      setError(null);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8">
       {/* 타이틀 섹션 */}
@@ -156,9 +286,12 @@ import axios from 'axios';
         </p>
       </div>
 
-      {/* 새 상품 추가 폼 섹션 */}
+      {/* 새 상품 추가 폼 섹션 / 수정 폼 섹션 */}
       <div className="w-full max-w-4xl bg-white shadow-lg rounded-lg p-8 mb-8">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">새 상품 추가</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">
+          {/*수정 모드에 따라 폼 제목 변경*/}
+          {editingProductId ? '상품 정보 수정' : '새 상품 추가'}
+        </h2>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">상품 이름 <span className="text-red-500">*</span></label>
@@ -231,7 +364,7 @@ import axios from 'axios';
               onChange={handleInputChange}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             />
-            {/* ⭐ Image 컴포넌트 대신 일반 img 태그 사용 */}
+            {/* Image 컴포넌트 대신 일반 img 태그 사용 */}
             {newProduct.image_url && (
               <img
                 src={newProduct.image_url}
@@ -249,8 +382,20 @@ import axios from 'axios';
               className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               disabled={loading} // 로딩 중에는 버튼 비활성화
             >
-              {loading ? '추가 중...' : '상품 추가'}
+              {/* 수정 모드에 따라 버튼 텍스트 변경*/}
+              {loading ? (editingProductId ? '수정 중...' : '추가 중...') : (editingProductId? '상품 수정' : '상품 추가')}
             </button>
+            {/*수정 취소 버튼 추가*/}
+            {editingProductId && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 rounded-md transition-all duration-200 ease-in-out"
+                disabled={loading}
+              >
+                수정 취소
+              </button>
+            )}
           </div>
         </form>
 
@@ -267,7 +412,7 @@ import axios from 'axios';
         {!loading && products.length === 0 && !error && (
           <p className="text-center text-gray-600">등록된 상품이 없습니다. 위에 폼을 이용해 추가해보세요!</p>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map(product => (
             <div key={product.id} className="border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col items-center text-center">
              {/* ⭐ Image 컴포넌트 대신 일반 img 태그 사용 */}
@@ -284,11 +429,29 @@ import axios from 'axios';
               <p className="text-xl font-bold text-blue-700 mb-1">₩{product.price.toLocaleString()}</p>
               <p className="text-gray-500 text-sm">재고: {product.stock_quantity}</p>
               {product.category && <p className="text-gray-500 text-xs mt-1 px-2 py-1 bg-gray-200 rounded-full">{product.category}</p>}
+              {/*수정 및 삭제 버튼 추가*/}
+              <div className="mt-4 flex space-x-2">
+                <button onClick={() => {handleEdit(product)}} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 shadow-sm">
+                  수정
+                </button>
+                <button onClick={() => {handleDelClick(product.id)}} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 shadow-sm">
+                  삭제
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* 커스텀 확인 모달 랜더링 */}
+      <ConfirmationModal
+        isOpen={isModalOpen}
+        message="진짜 이 상품 삭제할거임?..ㅠㅠ"
+        onConfirm={handleConfirmDel}
+        onCancel={handleCancelDel}
+        confirmText='삭제'
+        cancelText='취소'
+      />
     </div>
   );
-
  };

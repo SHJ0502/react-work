@@ -85,7 +85,9 @@ async function updateProduct(id, productData) {
     };
 
     try {
+
         const updateProduct = await productRepository.updateProduct(id,productData);
+        
         if (!updateProduct){
             throw new Error("상품 수정을 실패했습니다. 상품을 찾을 수 없거나 변경 사항이 없습니다..");
         }

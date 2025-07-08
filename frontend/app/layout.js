@@ -4,16 +4,26 @@
 
 import { Inter } from 'next/font/google'; // Google Font - Inter 임포트
 import Link from 'next/link'; // Next.js Link 컴포넌트 임포트
+import { useState } from 'react';
 import './globals.css'; // 전역 CSS (Tailwind CSS 포함) 임포트
 
 // lucide-react 아이콘 임포트: 검색, 사용자, 쇼핑 카트 아이콘
-import { Search, User, ShoppingCart } from 'lucide-react';
+import { Search, User, ShoppingCart, LogOut, userPlus } from 'lucide-react';
 
 // Inter 폰트 설정
 const inter = Inter({ subsets: ['latin'] });
 
 // RootLayout 컴포넌트: 모든 페이지에 공통적으로 적용되는 레이아웃을 정의합니다.
 export default function RootLayout({ children }) {
+
+  // 로그인 상태를 시뮬레이션 하는 상태 변수
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // 로그인/로그아웃 토글 함수
+  const handleAuthToggle = () => {
+    setIsLoggedIn(prev => !prev);
+  };
+
   return (
     <html lang="ko">
       <body className={inter.className}>
@@ -47,10 +57,33 @@ export default function RootLayout({ children }) {
 
             {/* 사용자 아이콘, 장바구니 아이콘 (우측) */}
             <div className="flex items-center space-x-6">
-              <Link href="/account" className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1">
-                <User size={24} />
-                <span className="hidden sm:inline">내 계정</span>
-              </Link>
+              {!isLoggedIn ? (
+                <>
+                  <Link href="/account" className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1">
+                    <User size={24} />
+                    <span className="hidden sm:inline">로그인</span>
+                  </Link>
+                  <Link href="/account" className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1">
+                    <User size={24} />
+                    <span className="hidden sm:inline">회원가입</span>
+                  </Link>
+                </>
+              ) : (
+                <>
+                    <Link href="/account" className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1">
+                    <User size={24} />
+                    <span className="hidden sm:inline">내 정보</span>
+                  </Link>
+                  <button
+                    onClick={handleAuthToggle} // ⭐ 임시 로그아웃 버튼
+                    className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1 bg-transparent border-none cursor-pointer p-0"
+                  >
+                    <LogOut size={24} />
+                    <span className="hidden sm:inline">로그아웃</span>
+                  </button>
+                </>
+              )}
+
               <Link href="/cart" className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1 relative">
                 <ShoppingCart size={24} />
                 <span className="hidden sm:inline">장바구니</span>
