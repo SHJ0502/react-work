@@ -1,4 +1,4 @@
-'use client'; // 클라이언트 컴포넌트임을 명시 (useState, useEffect 사용)
+ 'use client'; // 클라이언트 컴포넌트임을 명시 (useState, useEffect 사용)
 
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
@@ -6,10 +6,14 @@ import axios from 'axios';
 
 // modal 컴포넌트 추가
 import ConfirmationModal from '../components/ConfirmationModal';
+import { useRouter, useSearchParams } from 'next/navigation';  //useRouter, useSearchParams 임포트
 
 
 
  export default function Home() {
+
+  //useRouter 훅사용
+  const router = useRouter();
 
   // 상품목록을 저장할 변수
   const [products, setProducts] = useState([]);
@@ -42,6 +46,22 @@ import ConfirmationModal from '../components/ConfirmationModal';
   const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
   
+  //로그인 상태 확인 및 리다이렉트 로직
+  useEffect(() => {
+    const token = localStorage.getItem('jwt_token');
+    if (!token) {
+      // 토큰이 없으면 로그인 페이지로 리다이렉트
+      router.replace('/login');
+    }
+
+    // 토큰이 있으면 상품 데이터를 가져오도록 fetchProducts 호출
+    // 이 useEffect는 로그인 상태 확인 후 fetchProducts를 호출해야 하므로,
+    // fetchProducts의 의존성 배열에 router가 추가될 필요는 없습니다.
+    // fetchProducts는 별도의 useEffect에서 호출되거나, 여기서 직접 호출될 수 있d,a.
+    // 여기서는 별도의 useEffect에서 fetchProducts를 호출하도록 유지합니다.
+
+  },[router]);
+
   // 상품 목록을 백엔드에서 가져오는 비동기 함수 (axios 사용) 
   // --- 중요: fetchProducts 정의가 useEffect보다 먼저 와야 합니다. ---
   const fetchProducts = useCallback(async() => {
@@ -56,19 +76,19 @@ import ConfirmationModal from '../components/ConfirmationModal';
       console.log("Fetched products : ", response.data.products);
       setProducts(response.data.products);
       
-    } catch (e) {
+    } catch (err) {
       
-      console.error('Error fetching products:', e);
+      console.error('Error fetching products:', err);
       // axios 에러 처리 개선: 응답, 요청, 일반 에러 분리
-      if (e.response) {
+      if (err.response) {
         // 서버가 응답했지만 2xx 범위가 아닌 상태 코드
-        setError(e.response.data.error || `상품 목록을 가져오는 데 실패했습니다: ${e.response.status}`);
-      } else if (e.request) {
+        setError(err.response.data.error || `상품 목록을 가져오는 데 실패했습니다: ${err.response.status}`);
+      } else if (err.request) {
         // 요청이 전송되었지만 응답을 받지 못함 (네트워크 문제)
         setError('네트워크 오류: 백엔드 서버에 연결할 수 없습니다.');
       } else {
         // 요청 설정 중 발생한 에러
-        setError('요청 설정 중 오류 발생: ' + e.message);
+        setError('요청 설정 중 오류 발생: ' + err.message);
       }
     } finally {
       setLoading(false); // 종료
@@ -77,7 +97,13 @@ import ConfirmationModal from '../components/ConfirmationModal';
   
   // 컴포넌트가 마운트될 때 상품목록을 가져오는 함수 > // 상품 목록을 백엔드에서 가져오는 비동기 함수 (useCallback으로 메모이제이션) (2025-06-30 추가)
   useEffect(() => {
-    fetchProducts();
+
+    //토큰이 있을 때만 상품 목록을 가져오도록 조건 추가 (로그인 리다이렉트 로직과 연계)
+    const token = localStorage.getItem('jwt_token');
+    if (token) {
+      fetchProducts();
+    }
+
   }, [fetchProducts]); //useCallback으로 감싼 fetchProducts를 의존성 배열에 포함
 
 
@@ -137,7 +163,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
         setSuccessMessage('상품이 성공적으로 추가되었습니다!');
       }
 
-      console.log("API Response : ",response.data.product);
+      console.log("API Response : ",response.data);
       
       // 상품 초기화
       setNewProduct({
@@ -231,7 +257,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
     setSuccessMessage(null);
     
      try {
-      response = await axios.delete(`${API_BASE_URL}/api/products/${id}`);
+      response = await axios.delete(`${API_BASE_URL}/api/products/${productToDelId}`);
       console.log('Product deleted:', response.data.message);
       setSuccessMessage('상품이 성공적으로 삭제되었습니다!');
       fetchProducts(); // 상품 목록 새로고침
@@ -246,7 +272,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
       }
     } finally {
       setLoading(false);
-      setEditingProductId(null);  //삭제할 상품 id 초기화
+      setProductToDelId(null);  //삭제할 상품 id 초기화
     }
   }
 
@@ -415,7 +441,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
         <div div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map(product => (
             <div key={product.id} className="border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col items-center text-center">
-             {/* ⭐ Image 컴포넌트 대신 일반 img 태그 사용 */}
+             {/* Image 컴포넌트 대신 일반 img 태그 사용 */}
               <img
                 src={product.image_url || `https://placehold.co/150x100/CCCCCC/000000?text=No+Image`}
                 alt={product.name}

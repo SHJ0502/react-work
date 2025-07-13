@@ -4,14 +4,14 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config(); //.env 파일의 환경변수를 로드한다.
+const jwt = require('jsonwebtoken');    //jwt 모듈 임포트
 
 // MySQL 연결 풀은 db.js에서 가져옵니다. (연결 테스트는 db.js에서 이미 수행됩니다)
 require('./db.js'); // 이 파일이 실행되면서 db.js의 연결 풀이 초기화됩니다.
 
 // productRepository를 임포트하여 데이터베이스 로직을 사용합니다.
 const productRoutes = require('./routes/productRoutes.js'); // 상품 라우트 임포트
-// const userRoutes = require('./routes/userRoutes');   // 나중에 사용자 라우트 임포트
-// const orderRoutes = require('./routes/orderRoutes');   // 나중에 주문 라우트 임포트
+const authRoutes = require('./routes/authRoutes.js');       // 로그인 라우트 임포트
 
 // express 애플리케이션을  생성합니다.
 const app = express();
@@ -28,10 +28,13 @@ app.get('/', (req, res) => {
     res.send('Hello, from Backend with a fully Layered Architecture (MySQL)!');
 });
 
-// 라우트 미들웨어 연결
+// 라우트 미들웨어 연결 '/api/products' 경로로 들어오는 모든 요청을 productRoutes 라우터가 처리하도록 연결합니다.
 app.use('/api/products', productRoutes); // '/api/products' 경로로 오는 요청을 productRoutes가 처리
 // app.use('/api/users', userRoutes);     // '/api/users' 경로로 오는 요청을 userRoutes가 처리
 // app.use('/api/orders', orderRoutes);   // '/api/orders' 경로로 오는 요청을 orderRoutes가 처리
+
+// '/api/auth' 경로로 들어오는 모든 요청을 authRoutes 라우터가 처리하도록 연결합니다.
+app.use('/api/auth',authRoutes);
 
 // 서버가 리슨할 포트 번호를 설정한다.
 const PORT = process.env.PORT || 5000;
@@ -40,3 +43,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Backend Server is running on http://localhost:${PORT}`);
 });
+

@@ -4,11 +4,12 @@
 
 import { Inter } from 'next/font/google'; // Google Font - Inter 임포트
 import Link from 'next/link'; // Next.js Link 컴포넌트 임포트
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import './globals.css'; // 전역 CSS (Tailwind CSS 포함) 임포트
 
 // lucide-react 아이콘 임포트: 검색, 사용자, 쇼핑 카트 아이콘
-import { Search, User, ShoppingCart, LogOut, userPlus } from 'lucide-react';
+import { Search, User, ShoppingCart, LogOut, UserPlus, UserRoundIcon } from 'lucide-react';
 
 // Inter 폰트 설정
 const inter = Inter({ subsets: ['latin'] });
@@ -16,13 +17,28 @@ const inter = Inter({ subsets: ['latin'] });
 // RootLayout 컴포넌트: 모든 페이지에 공통적으로 적용되는 레이아웃을 정의합니다.
 export default function RootLayout({ children }) {
 
-  // 로그인 상태를 시뮬레이션 하는 상태 변수
+  const router = useRouter();
+
+  // 로그인 상태를 시뮬레이션 하는 상태 변수 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // 로그인/로그아웃 토글 함수
-  const handleAuthToggle = () => {
-    setIsLoggedIn(prev => !prev);
-  };
+  //컴포넌트 마운트 시 또는 로컬 스토리지 변경 시 로그인 상태 확인
+  useEffect(()=>{
+    const token = localStorage.getItem('jwt_token');
+    setIsLoggedIn(!!token);
+  },[]);
+
+  //로그아웃 핸들러
+  const handleLogOut = () => {
+    localStorage.removeItem('jwt_token');
+    setIsLoggedIn(false);
+    router.push('/login');
+  }
+
+  // 로그인/로그아웃 토글 함수 (임시, 실제로는 JWT 유효성 검사 등으로 변경될 것)
+  // const handleAuthToggle = () => {
+  //   setIsLoggedIn(prev => !prev);
+  // };
 
   return (
     <html lang="ko">
@@ -59,26 +75,30 @@ export default function RootLayout({ children }) {
             <div className="flex items-center space-x-6">
               {!isLoggedIn ? (
                 <>
-                  <Link href="/account" className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1">
+                {/*로그인 링크 (로그인 상태가 아닐떄)*/}
+                  <Link href="/login" className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1">
                     <User size={24} />
                     <span className="hidden sm:inline">로그인</span>
                   </Link>
-                  <Link href="/account" className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1">
-                    <User size={24} />
+                  {/*회원갑입 링크 (로그인 상태가 아닐떄)*/}
+                  <Link href="/register" className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1">
+                    <User size={24} /> {/* userPlus 대신 UserPlus 사용 */}
                     <span className="hidden sm:inline">회원가입</span>
                   </Link>
                 </>
               ) : (
                 <>
-                    <Link href="/account" className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1">
+                {/*내정보상태 (로그인 상태일떄)*/}
+                  <Link href="/account" className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1">
                     <User size={24} />
                     <span className="hidden sm:inline">내 정보</span>
                   </Link>
                   <button
-                    onClick={handleAuthToggle} // ⭐ 임시 로그아웃 버튼
+                    onClick={handleLogOut}
                     className="text-gray-600 hover:text-indigo-700 transition-colors duration-300 flex items-center space-x-1 bg-transparent border-none cursor-pointer p-0"
                   >
-                    <LogOut size={24} />
+                  {/*로그아웃 버튼 (로그인 상태일떄)*/}
+                  <LogOut size={24} />
                     <span className="hidden sm:inline">로그아웃</span>
                   </button>
                 </>

@@ -2,6 +2,7 @@
 'use client'; // 클라이언트 컴포넌트임을 명시
 
 import { useState } from 'react';
+//import image from 'next/image'; // Next.js image 컴포넌트 임포트 
 
 export default function LoginPage() {
   // 사용자 입력 상태 관리
@@ -13,6 +14,9 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
   // 성공 메시지
   const [successMessage, setSuccessMessage] = useState(null);
+
+  // 백엔드 api의 기본 url
+  const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
 
   // 폼 제출 핸들러
   const handleSubmit = async (e) => {
@@ -44,6 +48,18 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  //네이버 로그인 핸들러
+  const handleNaverLogin =() => {
+    // 백엔드의 네이버OAuth 시작 엔드포인트로 리다이렉트
+    window.location.href = `${API_BASE_URL}/api/auth/naver`;
+  }
+
+  //카카오 로그인 핸들러
+  const handleKakaoLogin =() => {
+    // 백엔드의 카카오OAuth 시작 엔드포인트로 리다이렉트
+    window.location.href = `${API_BASE_URL}/api/auth/kakao`;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
@@ -102,6 +118,52 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
+
+        {/*소셜 로그인 섹션 추가*/}
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">또는 소셜 계정으로 로그인</span>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col space-y-3">
+            {/* 네이버 로그인 버튼 */}
+            <button
+              onClick={handleNaverLogin}
+              className="w-full flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 px-4 rounded-lg shadow-md transition-all duration-200 ease-in-out"
+            >
+              <img
+                src="https://nid.naver.com/oauth2.0/oauth_type_i.png"
+                alt="네이버 로그인"
+                width={20}
+                height={20}
+                className="mr-2"
+                onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/20x20/CCCCCC/000000?text=N'; }}
+              />
+              네이버로 로그인
+            </button>
+
+            {/* 카카오 로그인 버튼 */}
+            <button
+              onClick={handleKakaoLogin}
+              className="w-full flex items-center justify-center bg-yellow-300 hover:bg-yellow-400 text-gray-800 font-bold py-2.5 px-4 rounded-lg shadow-md transition-all duration-200 ease-in-out"
+            >
+              <img
+                src="https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_small_ov.png"
+                alt="카카오 로그인"
+                width={20}
+                height={20}
+                className="mr-2"
+                onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/20x20/CCCCCC/000000?text=K'; }}
+              />
+              카카오로 로그인
+            </button>
+          </div>
+        </div>
 
         {/* 추가 링크 (회원가입, 비밀번호 찾기 등) */}
         <div className="text-sm text-center">
